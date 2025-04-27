@@ -24,7 +24,7 @@
 
       } else {
         console.log('Поиск не выполнен, так как строка поиска пуста.');
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 6; i++) {
           filteredExcursionList.value.push(excursionList.value[i]); 
         }
       }
@@ -42,43 +42,101 @@ onMounted(() => {
 <template>
   <div class="home-page">
     <div class="search-bar-container">
-      <input v-model="searchRequest" type="text" value="">
-      <button @click="Search"></button>
+      <input @input="Search" v-model="searchRequest" type="text" value="" placeholder="Поиск городов, экскурсий..."> 
+      <button @click="Search">Поиск</button>
     </div>
     <div class="excursion-results-section">
-      <div class="excursion-list" v-for="excursion in filteredExcursionList" :key="excursion.id">
-        <img :src="excursion.image" alt="Динамическое изображение">
-        <p>{{ excursion.title }}</p>
-        <p>Описание: {{ excursion.description }}</p>
-        <p>Дата: {{ excursion.date }}</p>
-        <p>Стоимость билета: {{ excursion.price }}₽</p>
-        <p>Начало у {{ excursion.departure }}</p>
+      <div class="excursion-list" v-if="filteredExcursionList" v-for="excursion in filteredExcursionList" :key="excursion.id">
+        <!-- <img :src="excursion.image" alt="Динамическое изображение"> -->
+        <h3>{{ excursion.title }}</h3>
+        <span>{{ excursion.description }}</span>
+        <span>Дата: {{ excursion.date }}</span>
+        <span>Стоимость билета: {{ excursion.price }}₽</span>
+        <span>Начало у {{ excursion.departure }}</span>
       </div>
-      <div class="history-section">
-        <p class="section-title">text2</p>
-        <ul class="history-list">
-        </ul>
-      </div>
+      <div v-else>По запросу {{ searchRequest }} не найдено не одной экскурсии</div>
+    </div>
+    <div class="history-section">
+      <p class="section-title">text2</p>
+      <ul class="history-list"></ul>
     </div>
   </div>
 </template>
 
 <style scoped>
-  .excursion-list {
-    padding: 15px;
-    border-radius: 15px;
-    background-color: rgb(59, 59, 59);
-    border: 2px solid rgb(36, 36, 36);
-    margin: 15px;
+
+  .home-page {
+    max-width: 900px;
+    margin: 0 auto;
   }
-  .excursion-results-section {
+
+  .search-bar-container {
     display: flex;
-    flex-wrap: wrap; 
-    gap: 10px; 
+    margin-bottom: 20px;
   }
-  p { 
-    color: rgb(255, 255, 255);
+
+  .search-bar-container input {
+      flex: 1;
+      padding: 10px;
+      background-color: #1f1f1f;
+      border: 1px solid #333;
+      border-right: none;
+      color: #e0e0e0;
+      border-radius: 6px 0 0 6px;
+      font-size: 16px;
+    }
+    .search-bar-container button {
+      padding: 10px 20px;
+      background-color: #9b00ff;
+      color: #fff;
+      border: 1px solid #9b00ff;
+      border-radius: 0 6px 6px 0;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+  .excursion-list {
+    background-color: #1f1f1f;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: background 0.3s;
+    color: #ffffff;
   }
+
+  .excursion-list:hover {
+    background-color: #292929;
+  }
+
+  .card a {
+    color: #bb86fc;
+    text-decoration: none;
+    font-size: 14px;
+    align-self: flex-start;
+  }
+
+  .excursion-list span {
+    margin: 0 0 20px;
+    color: #cccccc;
+    font-size: 14px;
+  }
+
+  .excursion-list h3 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    color: #ffffff;
+  }
+
+  .excursion-results-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px; 
+  }
+  
 </style>
   
   
