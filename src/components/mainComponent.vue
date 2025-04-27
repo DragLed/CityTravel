@@ -6,24 +6,25 @@
 
   const excursionList = ref([]);
   const filteredExcursionList = ref([]);
-  const searchRequest = ref('');;
+  const searchRequest = ref('');
+  const HistoryList = ref([]);
   const route = useRoute();
 
+  // Функция для поиска туров
   function Search() {
     filteredExcursionList.value = [];
     excursionList.value = [];
     axios.get('/detailed_tours_20 (2).json')
     .then(function (response) {
       excursionList.value = response.data;
-      
+
       if (searchRequest.value == 'TEST'){
         filteredExcursionList.value = excursionList.value;
       } else if (searchRequest.value) {
-          const filteredExcursions = excursionList.value.filter(function(excursion) {
-            return excursion.title.toLowerCase().includes(searchRequest.value.toLowerCase());
-          });
-          filteredExcursionList.value = filteredExcursions;
-
+        const filteredExcursions = excursionList.value.filter(function(excursion) {
+          return excursion.title.toLowerCase().includes(searchRequest.value.toLowerCase());
+        });
+        filteredExcursionList.value = filteredExcursions;
       } else {
         console.log('Поиск не выполнен, так как строка поиска пуста.');
         for (let i = 0; i < 6; i++) {
@@ -35,12 +36,61 @@
     .catch(function (error) {
       console.error('Ошибка при загрузке данных:', error);
     });
+  }
+
+  // Функция для получения истории туров
+  function GetHistory() {
+  // Загружаем историю туров из localStorage
+  const history = JSON.parse(localStorage.getItem('tourHistory')) || [];
+
+  // Записываем её в переменную HistoryList
+  HistoryList.value = history;
+
+  console.log("История туров:", HistoryList.value);
 }
-onMounted(() => {
-  Search();
-})
+
+
+  // Функция для перехода к туру и сохранения его в историю
+  function GoToTour(name, id, date) {
+    // Загружаем текущую историю из localStorage
+    let tourHistory = JSON.parse(localStorage.getItem('tourHistory')) || [];
+
+    // Проверяем, чтобы тур с таким ID не был уже в истории (если не хочешь дублировать)
+    const existingTour = tourHistory.find(tour => tour.id === id);
+    if (!existingTour) {
+      // Добавляем новый тур в историю
+      tourHistory.push({ id, name ,date});
+    }
+
+    // Сохраняем обновленную историю в localStorage
+    localStorage.setItem('tourHistory', JSON.stringify(tourHistory));
+
+    console.log("Запись истории в localStorage:", tourHistory);
+    GetHistory();
+  }
+
+  // Функция для удаления истории туров
+  function deleteHistory(id) {
+    let tourHistory = JSON.parse(localStorage.getItem('tourHistory')) || [];
+
+    // Фильтруем историю, исключая тур с заданным id
+    tourHistory = tourHistory.filter(tour => tour.id !== id);
+
+    // Сохраняем обновленную историю в localStorage
+    localStorage.setItem('tourHistory', JSON.stringify(tourHistory));
+
+    console.log(`Тур с ID "${id}" удалён из истории`);
+    GetHistory();
+  }
+
+  // Загружаем данные при монтировании компонента
+  onMounted(() => {
+    Search();
+    GetHistory();
+  });
 
 </script>
+
 
 <template>
   <div class="home-page">
@@ -49,7 +99,7 @@ onMounted(() => {
       <button @click="Search">Поиск</button>
     </div>
     <div class="excursion-results-section">
-      <div class="excursion-list" v-if="filteredExcursionList" v-for="excursion in filteredExcursionList" :key="excursion.id">
+      <div class="excursion-list" @click="GoToTour(excursion.title, excursion.id, excursion.date)" v-if="filteredExcursionList" v-for="excursion in filteredExcursionList" :key="excursion.id">
         <!-- <img :src="excursion.image" alt="Динамическое изображение"> -->
         <h3>{{ excursion.title }}</h3>
         <span>{{ excursion.description }}</span>
@@ -59,9 +109,18 @@ onMounted(() => {
       </div>
       <div v-else>По запросу {{ searchRequest }} не найдено не одной экскурсии</div>
     </div>
-    <div class="history-section">
-      <p class="section-title">text2</p>
-      <ul class="history-list"></ul>
+    <div class="history">
+      <h4>История посещений:</h4>
+        <div v-if="HistoryList.length > 0">
+          <div class="historyblock" v-for="History in HistoryList" :key="History.id">
+            <div>
+              <p @click="GoToTour(History.name, History.id, History.date)">{{ History.name }} </p>
+              <p>{{ History.date }}</p>
+            </div>
+            <button @click="deleteHistory(History.id)">Удалить</button>
+          </div>
+        </div>
+      <p v-else>История пуста</p>
     </div>
   </div>
 </template>
@@ -106,12 +165,14 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    transition: background 0.3s;
+    transition: 0.3s;
     color: #ffffff;
   }
 
   .excursion-list:hover {
     background-color: #292929;
+
+    margin: -10px;
   }
 
   .card a {
@@ -139,7 +200,60 @@ onMounted(() => {
     gap: 20px;
     margin-bottom: 30px; 
   }
+  .history {
+      background-color: #1e1e1e;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+      border: 1px solid #333;
+    }
+    .history h4 {
+      margin-top: 0;
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .historyblock {
+      padding: 8px 0;
+      border-bottom: 1px solid #333;
+      color: #ccc;
+      
+    }
+
+    .historyblock p {
+      transition: 0.1s;
+    }
+
+    .historyblock p:hover {
+      opacity: 0.3;
+    }
+    .history li:last-child {
+      border-bottom: none;
+    }
   
+  .historyblock {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .historyblock button{
+    background-color: rgb(0, 170, 255);
+    border: 1.5px solid rgb(4, 121, 180);
+    border-radius: 15px;
+    padding: 7px;
+    transition: 0.5s;
+  }
+
+  .historyblock button:hover{
+    background-color: rgb(255, 0, 0);
+    border: 1.5px solid rgb(204, 0, 0);
+    padding:3px;
+    margin-right: 2px;
+  }
+
+
 </style>
   
   
