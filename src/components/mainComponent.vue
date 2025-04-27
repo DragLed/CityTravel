@@ -14,7 +14,7 @@
     excursionList.value = [];
     axios.get('/detailed_tours_20 (2).json')
     .then(function (response) {
-      excursionList.value = response.data.tours;
+      excursionList.value = response.data;
 
       if (searchRequest.value) {
         const filteredExcursions = excursionList.value.filter(function(excursion) {
@@ -25,7 +25,8 @@
       } else {
         console.log('Поиск не выполнен, так как строка поиска пуста.');
         for (let i = 0; i < 6; i++) {
-          filteredExcursionList.value.push(excursionList.value[i]); 
+          let a = Math.floor(Math.random() * excursionList.value.length);
+          filteredExcursionList.value.push(excursionList.value[a]); 
         }
       }
     })
