@@ -15,12 +15,14 @@
     axios.get('/detailed_tours_20 (2).json')
     .then(function (response) {
       excursionList.value = response.data;
-
-      if (searchRequest.value) {
-        const filteredExcursions = excursionList.value.filter(function(excursion) {
-          return excursion.title.toLowerCase().includes(searchRequest.value.toLowerCase());
-        });
-        filteredExcursionList.value = filteredExcursions;
+      
+      if (searchRequest.value == 'TEST'){
+        filteredExcursionList.value = excursionList.value;
+      } else if (searchRequest.value) {
+          const filteredExcursions = excursionList.value.filter(function(excursion) {
+            return excursion.title.toLowerCase().includes(searchRequest.value.toLowerCase());
+          });
+          filteredExcursionList.value = filteredExcursions;
 
       } else {
         console.log('Поиск не выполнен, так как строка поиска пуста.');
