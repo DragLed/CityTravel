@@ -8,105 +8,160 @@ const excursionList = ref([]);
 const filteredExcursionList = ref([]);
 const searchRequest = ref('');
 const HistoryList = ref([]);
+const isLoading = ref(false);
 const router = useRouter();
 
-function Search() {
-  filteredExcursionList.value = [];
-  excursionList.value = [];
-  axios.get('/detailed_tours_20 (2).json')
-    .then(function (response) {
-      excursionList.value = response.data;
+async function Search() {
+  isLoading.value = true;
+  try {
+    const response = await axios.get('/detailed_tours_20 (2).json');
+    excursionList.value = response.data;
 
-      if (searchRequest.value == 'TEST') {
-        filteredExcursionList.value = excursionList.value;
-      } else if (searchRequest.value) {
-        const filteredExcursions = excursionList.value.filter(function (excursion) {
-          return excursion.title.toLowerCase().includes(searchRequest.value.toLowerCase());
-        });
-        filteredExcursionList.value = filteredExcursions;
-      } else {
-        console.log('Поиск не выполнен, так как строка поиска пуста.');
-        for (let i = 0; i < 6; i++) {
-          let a = Math.floor(Math.random() * excursionList.value.length);
-          filteredExcursionList.value.push(excursionList.value[a]);
-        }
-      }
-    })
-    .catch(function (error) {
-      console.error('Ошибка при загрузке данных:', error);
-    });
+    if (searchRequest.value.toLowerCase() === 'test') {
+      filteredExcursionList.value = [...excursionList.value];
+    } else if (searchRequest.value) {
+      filteredExcursionList.value = excursionList.value.filter(excursion =>
+        excursion.title.toLowerCase().includes(searchRequest.value.toLowerCase())
+      );
+    } else {
+      // Рандомные 6 экскурсий
+      filteredExcursionList.value = [...excursionList.value]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 6);
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке данных:', error);
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 function GetHistory() {
-  const history = JSON.parse(localStorage.getItem('tourHistory')) || [];
-  HistoryList.value = history;
-  console.log("История туров:", HistoryList.value);
+  HistoryList.value = JSON.parse(localStorage.getItem('tourHistory')) || [];
 }
 
 function GoToTour(id) {
-  GetHistory();
-  router.push({ name: 'excursion', params: { id: id } });
+  router.push({ name: 'excursion', params: { id } });
 }
 
 function deleteHistory(id) {
-  let tourHistory = JSON.parse(localStorage.getItem('tourHistory')) || [];
-  tourHistory = tourHistory.filter(tour => tour.id !== id);
-  localStorage.setItem('tourHistory', JSON.stringify(tourHistory));
-  console.log(`Тур с ID "${id}" удалён из истории`);
+  const tourHistory = JSON.parse(localStorage.getItem('tourHistory')) || [];
+  const updatedHistory = tourHistory.filter(tour => tour.id !== id);
+  localStorage.setItem('tourHistory', JSON.stringify(updatedHistory));
   GetHistory();
+}
+
+function clearAllHistory() {
+  if (confirm('Вы уверены, что хотите очистить всю историю?')) {
+    localStorage.removeItem('tourHistory');
+    GetHistory();
+  }
 }
 
 onMounted(() => {
   Search();
   GetHistory();
 });
-
 </script>
-
 
 <template>
   <div class="home-page">
     <div class="search-bar-container">
-      <input @input="Search" v-model="searchRequest" type="text" value="" placeholder="Поиск городов, экскурсий...">
-      <button @click="Search">Поиск</button>
+      <input 
+        v-model="searchRequest" 
+        @input="Search"
+        @keyup.enter="Search"
+        type="text" 
+        placeholder="Поиск городов, экскурсий..."
+        class="search-input"
+      >
+      <button @click="Search" class="search-button">
+        <span class="button-text">Поиск</span>
+        <span class="button-icon">🔍</span>
+      </button>
     </div>
-    <div class="excursion-results-section">
-      <div class="excursion-list" @click="GoToTour(excursion.id)" v-if="filteredExcursionList"
-        v-for="excursion in filteredExcursionList" :key="excursion.id">
-        <!-- <img :src="excursion.image" alt="Динамическое изображение"> -->
-        <h3>{{ excursion.title }}</h3>
-        <span>{{ excursion.description }}</span>
-        <span>Дата: {{ excursion.date }}</span>
-        <span>Стоимость билета: {{ excursion.price }}₽</span>
-        <span>Начало у {{ excursion.departure }}</span>
-      </div>
-      <div v-else>По запросу {{ searchRequest }} не найдено не одной экскурсии</div>
+
+    <div v-if="isLoading" class="loading-spinner">
+      <div class="spinner"></div>
     </div>
-    <div class="history">
-  <h4>История посещений</h4>
-  <div class="history-container">
-    <div v-if="HistoryList.length > 0">
-      <div class="historyblock" v-for="History in HistoryList" :key="History.id">
-        <div class="history-info">
-          <div class="history-name">{{ History.name }}</div>
-          <div class="history-id">ID: {{ History.id }} • {{ History.date }}</div>
+
+    <div v-else class="excursion-results-section">
+      <div 
+        v-for="excursion in filteredExcursionList" 
+        :key="excursion.id"
+        class="excursion-card"
+        @click="GoToTour(excursion.id)"
+      >
+        <div class="card-image-placeholder">
+          <span class="image-text">{{ excursion.city.charAt(0) }}</span>
         </div>
-        <div class="history-actions">
-          <button class="history-btn history-btn-view" @click="GoToTour(History.id)">Открыть</button>
-          <button class="history-btn history-btn-delete" @click="deleteHistory(History.id)">Удалить</button>
+        <div class="card-content">
+          <h3>{{ excursion.title }}</h3>
+          <p class="description">{{ excursion.description }}</p>
+          <div class="card-details">
+            <span class="detail-item">🗓 {{ excursion.date }}</span>
+            <span class="detail-item">💰 {{ excursion.price }}₽</span>
+            <span class="detail-item">📍 {{ excursion.departure }}</span>
+          </div>
+          <div class="card-badge" v-if="excursion.price < 1000">Выгодно!</div>
         </div>
       </div>
+
+      <div v-if="!filteredExcursionList.length" class="no-results">
+        <p>По запросу "{{ searchRequest }}" ничего не найдено</p>
+        <button @click="searchRequest = ''; Search()" class="reset-button">
+          Сбросить поиск
+        </button>
+      </div>
     </div>
-    <div v-else class="empty-history">
-      Вы пока не посещали экскурсий
+
+    <div class="history-section">
+      <div class="history-header">
+        <h4>История посещений</h4>
+        <button 
+          v-if="HistoryList.length" 
+          @click="clearAllHistory"
+          class="clear-history-button"
+        >
+          Очистить всё
+        </button>
+      </div>
+      
+      <div v-if="HistoryList.length" class="history-list">
+        <div 
+          v-for="History in HistoryList" 
+          :key="History.id"
+          class="history-item"
+        >
+          <div class="history-info" @click="GoToTour(History.id)">
+            <div class="history-name">
+              <span class="history-icon">📅</span>
+              {{ History.name }}
+            </div>
+            <div class="history-meta">
+              <span class="history-date">{{ History.date }}</span>
+              <span class="history-id">ID: {{ History.id }}</span>
+            </div>
+          </div>
+          <button 
+            @click.stop="deleteHistory(History.id)"
+            class="delete-button"
+            title="Удалить из истории"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+      
+      <div v-else class="empty-history">
+        <p>Вы пока не посещали экскурсий</p>
+      </div>
     </div>
-  </div>
-</div>
   </div>
 </template>
 
-
 <style scoped>
+/* Общие стили */
 .home-page {
   max-width: 1200px;
   margin: 0 auto;
@@ -115,6 +170,7 @@ onMounted(() => {
   font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
+/* Поисковая строка */
 .search-bar-container {
   display: flex;
   margin-bottom: 30px;
@@ -124,9 +180,9 @@ onMounted(() => {
   margin-right: auto;
 }
 
-.search-bar-container input {
+.search-input {
   flex: 1;
-  padding: 12px 20px;
+  padding: 15px 20px;
   background-color: #1f1f1f;
   border: 1px solid #333;
   border-right: none;
@@ -137,14 +193,14 @@ onMounted(() => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-.search-bar-container input:focus {
+.search-input:focus {
   outline: none;
   border-color: #9b00ff;
   box-shadow: 0 0 0 2px rgba(155, 0, 255, 0.2);
 }
 
-.search-bar-container button {
-  padding: 12px 25px;
+.search-button {
+  padding: 0 25px;
   background: linear-gradient(135deg, #9b00ff 0%, #6a00ff 100%);
   color: #fff;
   border: none;
@@ -153,104 +209,170 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.search-bar-container button:hover {
+.search-button:hover {
   background: linear-gradient(135deg, #8a00e6 0%, #5a00e6 100%);
   transform: translateY(-1px);
 }
 
+.button-icon {
+  font-size: 18px;
+}
+
+/* Карточки экскурсий */
 .excursion-results-section {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 25px;
   margin-bottom: 40px;
 }
 
-.excursion-list {
+.excursion-card {
   background: linear-gradient(145deg, #1f1f1f 0%, #252525 100%);
   border: 1px solid #333;
   border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
+  padding: 15px;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   cursor: pointer;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
 }
 
-.excursion-list::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(155, 0, 255, 0.1) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.excursion-list:hover {
+.excursion-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
   border-color: #9b00ff;
 }
 
-.excursion-list:hover::before {
-  opacity: 1;
+.card-image-placeholder {
+  background: linear-gradient(135deg, #9b00ff 0%, #6a00ff 100%);
+  height: 120px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+  position: relative;
+  overflow: hidden;
 }
 
-.excursion-list h3 {
-  margin: 0 0 15px;
+.image-text {
+  font-size: 60px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.excursion-card h3 {
+  margin: 0 0 10px;
   font-size: 18px;
   color: #ffffff;
   font-weight: 600;
-  position: relative;
-  z-index: 1;
 }
 
-.excursion-list span {
-  margin: 0 0 12px;
+.description {
   color: #b0b0b0;
   font-size: 14px;
-  position: relative;
-  z-index: 1;
+  margin-bottom: 15px;
+  flex: 1;
 }
 
-.history {
-  background: #1e1e1e;
-  border-radius: 12px;
+.card-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.detail-item {
+  background: rgba(40, 40, 40, 0.7);
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.card-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #ff5722;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* История */
+.history-section {
+  background: linear-gradient(145deg, #1e1e1e 0%, #222222 100%);
   padding: 25px;
-  margin-top: 40px;
-  border: 1px solid #2e2e2e;
+  border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid #333;
 }
 
-.history h4 {
-  margin: 0 0 20px;
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.history-header h4 {
+  margin: 0;
   font-size: 18px;
   color: #9b00ff;
   font-weight: 600;
   display: flex;
   align-items: center;
+  gap: 10px;
 }
 
-.history h4::before {
-  content: "🕒";
-  margin-right: 10px;
-  font-size: 20px;
+.clear-history-button {
+  background: rgba(255, 75, 75, 0.2);
+  color: #ff6b6b;
+  border: none;
+  padding: 5px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.history-container {
+.clear-history-button:hover {
+  background: rgba(255, 75, 75, 0.3);
+}
+
+.history-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.historyblock {
+.history-item {
   background: rgba(40, 40, 40, 0.6);
   border-radius: 8px;
   padding: 15px;
@@ -258,17 +380,16 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   transition: all 0.25s ease;
-  border-left: 3px solid transparent;
 }
 
-.historyblock:hover {
+.history-item:hover {
   background: rgba(50, 50, 50, 0.8);
-  border-left: 3px solid #9b00ff;
   transform: translateX(5px);
 }
 
 .history-info {
   flex: 1;
+  cursor: pointer;
 }
 
 .history-name {
@@ -277,12 +398,17 @@ onMounted(() => {
   margin-bottom: 5px;
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
-.history-name::before {
-  content: "📍";
-  margin-right: 8px;
-  opacity: 0.7;
+.history-meta {
+  display: flex;
+  gap: 15px;
+}
+
+.history-date {
+  font-size: 12px;
+  color: #aaa;
 }
 
 .history-id {
@@ -291,37 +417,20 @@ onMounted(() => {
   font-family: monospace;
 }
 
-.history-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.history-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.delete-button {
+  background: none;
   border: none;
-}
-
-.history-btn-view {
-  background: rgba(155, 0, 255, 0.15);
-  color: #bb86fc;
-}
-
-.history-btn-view:hover {
-  background: rgba(155, 0, 255, 0.25);
-}
-
-.history-btn-delete {
-  background: rgba(255, 75, 75, 0.15);
   color: #ff6b6b;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  padding: 5px;
+  border-radius: 50%;
 }
 
-.history-btn-delete:hover {
-  background: rgba(255, 75, 75, 0.25);
+.delete-button:hover {
+  background: rgba(255, 75, 75, 0.2);
+  transform: scale(1.2);
 }
 
 .empty-history {
@@ -329,48 +438,107 @@ onMounted(() => {
   padding: 30px;
   color: #666;
   font-style: italic;
-  background: rgba(30, 30, 30, 0.5);
-  border-radius: 8px;
-  margin-top: 15px;
 }
 
-.empty-history::before {
-  content: "😕";
-  font-size: 24px;
-  display: block;
-  margin-bottom: 10px;
+.empty-history img {
+  width: 100px;
+  opacity: 0.5;
+  margin-bottom: 15px;
 }
 
-/* Анимация появления элементов */
-@keyframes historyItemAppear {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+/* Загрузка */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 50px;
 }
 
-.historyblock {
-  animation: historyItemAppear 0.3s ease-out forwards;
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(155, 0, 255, 0.2);
+  border-radius: 50%;
+  border-top-color: #9b00ff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+}
+
+.no-results-image {
+  width: 150px;
+  opacity: 0.7;
+  margin-bottom: 20px;
+}
+
+.reset-button {
+  background: rgba(155, 0, 255, 0.1);
+  color: #bb86fc;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  margin-top: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reset-button:hover {
+  background: rgba(155, 0, 255, 0.2);
 }
 
 /* Адаптивность */
-@media (max-width: 600px) {
-  .historyblock {
+@media (max-width: 768px) {
+  .home-page {
+    padding: 15px;
+  }
+  
+  .search-bar-container {
+    flex-direction: column;
+  }
+  
+  .search-input {
+    border-radius: 20px;
+    margin-bottom: 10px;
+    border-right: 1px solid #333;
+  }
+  
+  .search-button {
+    border-radius: 20px;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .excursion-results-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .history-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 15px;
   }
   
-  .history-actions {
+  .delete-button {
     align-self: flex-end;
   }
+}
+
+@media (max-width: 480px) {
+  .card-details {
+    flex-direction: column;
+    gap: 8px;
+  }
   
-  .history-btn {
-    padding: 5px 10px;
+  .history-meta {
+    flex-direction: column;
+    gap: 5px;
   }
 }
 </style>
