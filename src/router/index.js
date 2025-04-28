@@ -7,7 +7,7 @@ import ExcursionPage from '../components/excursionPage.vue'
 
 const routes = [
   { path: '/', component: MainComponent },
-  { path: '/excursion', component: ExcursionPage }
+  { path: '/excursion/:id', component: ExcursionPage, name: 'excursion' }
 ]
 
 const router = createRouter({
