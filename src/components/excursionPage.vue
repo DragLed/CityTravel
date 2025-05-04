@@ -1,8 +1,7 @@
 <script setup>
 import axios from 'axios';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { onMounted } from 'vue';
 
 const route = useRoute();
 const excursionId = parseInt(route.params.id);
@@ -10,6 +9,10 @@ const excursion = ref(null);
 const HistoryList = ref([]);
 const isLoading = ref(true);
 const showAllSights = ref(false);
+const weather = ref(null);
+const error = ref('');
+
+const API_KEY = '14cc090ee66620b128659eaa01ba47e4';
 
 async function loadExcursionData() {
   isLoading.value = true;
@@ -18,21 +21,36 @@ async function loadExcursionData() {
     if (response.data && Array.isArray(response.data)) {
       excursion.value = response.data.find(item => item.id === excursionId) || null;
     }
-  } catch (error) {
-    console.error('Ошибка при загрузке данных:', error);
+  } catch (err) {
+    console.error('Ошибка при загрузке экскурсии:', err);
   } finally {
     isLoading.value = false;
   }
+  if (excursion.value && excursion.value.city) {
+    try {
+      const weatherResponse = await axios.get(
+        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+          excursion.value.city
+        )}&units=metric&lang=ru&appid=${API_KEY}`
+      );
+      weather.value = weatherResponse.data;
+      error.value = '';
+    } catch (err) {
+      weather.value = null;
+      error.value = 'Город не найден. Проверьте правильность написания.';
+    }
+  }
 }
+
 
 function GoToTour(name, id, date) {
   const tourHistory = JSON.parse(localStorage.getItem('tourHistory')) || [];
   const existingTour = tourHistory.find(tour => tour.id === id);
-  
+
   if (!existingTour) {
     tourHistory.push({ name, id, date });
     localStorage.setItem('tourHistory', JSON.stringify(tourHistory));
-    showNotification(`Вы записались на "${name}"`);
+    showNotification(`Вы записались на "${name}"`, 'success');
   } else {
     showNotification(`Вы уже записаны на "${name}"`, 'info');
   }
@@ -48,7 +66,7 @@ function showNotification(message, type = 'success') {
   notification.className = `notification ${type}`;
   notification.textContent = message;
   document.body.appendChild(notification);
-  
+
   setTimeout(() => {
     notification.classList.add('fade-out');
     setTimeout(() => notification.remove(), 500);
@@ -65,19 +83,20 @@ onMounted(() => {
 });
 </script>
 
+
 <template>
   <div class="excursion-page">
     <div v-if="isLoading" class="loading-spinner">
       <div class="spinner"></div>
       <p>Загрузка данных экскурсии...</p>
     </div>
-    
+
     <div v-else-if="!excursion" class="error-message">
       <h2>Экскурсия не найдена</h2>
       <p>К сожалению, запрашиваемая экскурсия не существует или была удалена.</p>
       <router-link to="/" class="back-link">← Вернуться на главную</router-link>
     </div>
-    
+
     <div v-else class="excursion-container">
       <div class="excursion-header">
         <h1>{{ excursion.title }}</h1>
@@ -87,21 +106,21 @@ onMounted(() => {
           <span class="meta-item">⏱️ {{ excursion.time_start }} - {{ excursion.time_end }}</span>
         </div>
       </div>
-      
+
       <div class="excursion-gallery">
         <div class="main-image"></div>
         <div class="thumbnails">
           <div class="thumbnail" v-for="i in 3" :key="i"></div>
         </div>
       </div>
-      
+
       <div class="excursion-content">
         <div class="content-section">
           <h2>Описание экскурсии</h2>
           <p class="short-description">{{ excursion.description }}</p>
           <p class="full-description">{{ excursion.full_description }}</p>
         </div>
-        
+
         <div class="content-grid">
           <div class="info-card">
             <h3>Основная информация</h3>
@@ -111,7 +130,7 @@ onMounted(() => {
               <li><strong>Транспорт:</strong> {{ excursion.transport }}</li>
             </ul>
           </div>
-          
+
           <div class="info-card">
             <h3>Места</h3>
             <ul class="info-list">
@@ -119,11 +138,32 @@ onMounted(() => {
               <li><strong>Место отправления:</strong> {{ excursion.departure }}</li>
             </ul>
           </div>
-          
+
+          <div class="info-card">
+            <h3>Погода</h3>
+            <ul class="info-list" v-if="weather">
+              <li>
+                <h2 class="text-xl font-semibold">{{ weather.name }}</h2>
+              </li>
+              <li>
+                <div class="flex items-center gap-4 mt-2">
+                  <img :src="`https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`"
+                    :alt="weather.weather[0].description" />
+                  <div>
+                    <span class="text-lg capitalize">{{ weather.weather[0].description }}  </span>
+                    <span class="text-xl font-bold">+{{ Math.round(weather.main.temp) }}°C</span>
+                  </div>
+                </div>
+              </li>
+            </ul>
+            <div v-else-if="error" class="text-red-500 mt-4">{{ error }}</div>
+            <div v-else class="text-gray-500 mt-4">Загрузка погоды...</div>
+          </div>
+
           <div class="info-card full-width" v-if="excursion.sights && excursion.sights.length">
             <h3>Достопримечательности <button @click="toggleSights" class="toggle-sights">
-              {{ showAllSights ? 'Скрыть' : 'Показать все' }}
-            </button></h3>
+                {{ showAllSights ? 'Скрыть' : 'Показать все' }}
+              </button></h3>
             <ul class="sights-list" :class="{ 'show-all': showAllSights }">
               <li v-for="(sight, index) in excursion.sights" :key="index">
                 <span class="sight-number">{{ index + 1 }}.</span> {{ sight }}
@@ -132,16 +172,13 @@ onMounted(() => {
             <p class="sights-count">Всего объектов: {{ excursion.sights.length }}</p>
           </div>
         </div>
-        
+
         <div class="action-section">
           <div class="price-tag">
             <span class="price">{{ excursion.price }} руб.</span>
             <span class="per-person">за человека</span>
           </div>
-          <button 
-            @click="GoToTour(excursion.title, excursion.id, excursion.date)"
-            class="book-button"
-          >
+          <button @click="GoToTour(excursion.title, excursion.id, excursion.date)" class="book-button">
             Записаться на экскурсию
           </button>
         </div>
@@ -151,7 +188,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* Общие стили */
 .excursion-page {
   max-width: 1200px;
   margin: 0 auto;
@@ -160,7 +196,6 @@ onMounted(() => {
   font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
-/* Загрузка */
 .loading-spinner {
   text-align: center;
   padding: 50px;
@@ -177,10 +212,11 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Ошибка */
 .error-message {
   text-align: center;
   padding: 50px;
@@ -204,7 +240,6 @@ onMounted(() => {
   text-decoration: underline;
 }
 
-/* Шапка экскурсии */
 .excursion-header {
   margin-bottom: 30px;
   text-align: center;
@@ -247,7 +282,6 @@ onMounted(() => {
   gap: 5px;
 }
 
-/* Галерея */
 .excursion-gallery {
   margin-bottom: 30px;
   border-radius: 12px;
@@ -286,7 +320,6 @@ onMounted(() => {
   transform: scale(1.05);
 }
 
-/* Контент */
 .excursion-content {
   display: flex;
   flex-direction: column;
@@ -372,7 +405,6 @@ onMounted(() => {
   grid-column: 1 / -1;
 }
 
-/* Достопримечательности */
 .sights-list {
   list-style: none;
   padding: 0;
@@ -417,7 +449,6 @@ onMounted(() => {
   margin-top: 15px;
 }
 
-/* Кнопка записи */
 .action-section {
   display: flex;
   justify-content: space-between;
@@ -462,7 +493,6 @@ onMounted(() => {
   box-shadow: 0 6px 20px rgba(155, 0, 255, 0.4);
 }
 
-/* Уведомления */
 .notification {
   position: fixed;
   bottom: 20px;
@@ -493,13 +523,27 @@ onMounted(() => {
 }
 
 @keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes fadeOut {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 /* Адаптивность */
@@ -507,29 +551,29 @@ onMounted(() => {
   .excursion-page {
     padding: 15px;
   }
-  
+
   .excursion-header h1 {
     font-size: 26px;
   }
-  
+
   .meta-item {
     font-size: 12px;
     padding: 5px 10px;
   }
-  
+
   .main-image {
     height: 250px;
   }
-  
+
   .content-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .action-section {
     flex-direction: column;
     gap: 20px;
   }
-  
+
   .book-button {
     width: 100%;
   }
@@ -539,13 +583,13 @@ onMounted(() => {
   .excursion-header h1 {
     font-size: 22px;
   }
-  
+
   .excursion-meta {
     flex-direction: column;
     align-items: center;
     gap: 10px;
   }
-  
+
   .sights-list {
     grid-template-columns: 1fr;
   }

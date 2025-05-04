@@ -24,7 +24,6 @@ async function Search() {
         excursion.title.toLowerCase().includes(searchRequest.value.toLowerCase())
       );
     } else {
-      // Рандомные 6 экскурсий
       filteredExcursionList.value = [...excursionList.value]
         .sort(() => 0.5 - Math.random())
         .slice(0, 6);
