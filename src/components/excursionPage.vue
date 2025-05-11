@@ -98,6 +98,7 @@ onMounted(() => {
     </div>
 
     <div v-else class="excursion-container">
+      
       <div class="excursion-header">
         <h1>{{ excursion.title }}</h1>
         <div class="excursion-meta">
@@ -107,12 +108,12 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="excursion-gallery">
+      <!-- <div class="excursion-gallery">
         <div class="main-image"></div>
         <div class="thumbnails">
           <div class="thumbnail" v-for="i in 3" :key="i"></div>
         </div>
-      </div>
+      </div> -->
 
       <div class="excursion-content">
         <div class="content-section">
