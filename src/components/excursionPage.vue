@@ -192,7 +192,7 @@ onMounted(() => {
 .excursion-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+
   color: #e0e0e0;
   font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }

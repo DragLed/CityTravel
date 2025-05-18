@@ -160,16 +160,15 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* Общие стили */
+
 .home-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
   color: #e0e0e0;
   font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
-/* Поисковая строка */
+
 .search-bar-container {
   display: flex;
   margin-bottom: 30px;

@@ -6,8 +6,7 @@
   <div id="app">
     <header class="app-header">
       <nav class="main-nav">
-        <router-link to="/" class="nav-link">Главная</router-link>
-        <router-link to="/excursion" class="nav-link">Экскурсии</router-link>
+        <router-link to="/" class="nav-link">Экскурсии</router-link>
         <div class="nav-decoration"></div>
       </nav>
     </header>
