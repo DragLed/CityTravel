@@ -7,6 +7,7 @@
     <header class="app-header">
       <nav class="main-nav">
         <router-link to="/" class="nav-link">Экскурсии</router-link>
+        <img src="/image.png" alt="Логотип" class="nav-logo">
         <div class="nav-decoration"></div>
       </nav>
     </header>
@@ -43,6 +44,8 @@
 
 .main-nav {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 2rem;
   position: relative;
   max-width: 1200px;
@@ -58,6 +61,20 @@
   border-radius: 4px;
   transition: all 0.3s ease;
   position: relative;
+}
+
+.nav-logo {
+  height: 85px; /* Фиксированная высота */
+  width: auto; /* Сохраняет пропорции */
+  object-fit: contain; /* Гарантирует, что изображение будет полностью видно */
+  margin: 0 1rem; /* Отступы вокруг изображения */
+  border-radius: 18px;
+  border: #888 solid 3px;
+  transition: 0.2s;
+}
+.nav-logo:hover {
+  transform: scale(1.2);
+  transition: 0.2s;
 }
 
 .nav-link:hover {
@@ -125,6 +142,10 @@
   .nav-link {
     font-size: 1rem;
     padding: 0.5rem;
+  }
+  
+  .nav-logo {
+    height: 30px; /* Уменьшаем размер логотипа на мобильных */
   }
   
   .nav-decoration {
